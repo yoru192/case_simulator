@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1",
+    "name": "Chroma 3 Case",
+    "imageUrl": "https://...",
+    "price": 2.49,
+    "rarity": "Base Grade",
+    "items": [
+      {
+        "id": "1",
+        "name": "AK-47 | Phantom Disruptor",
+        "weapon": "AK-47",
+        "skin": "Phantom Disruptor",
+        "price": 15.50,
+        "rarity": "Classified",
+        "imageUrl": "https://..."
+      }
+    ]
+  }
+]

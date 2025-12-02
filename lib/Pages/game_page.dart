@@ -1,12 +1,14 @@
+import 'package:case_simulator/Widgets/balance_widget.dart';
+import 'package:case_simulator/Widgets/rank_widget.dart';
+import 'package:case_simulator/Pages/ranks_screen.dart'; // ← ДОДАЙ ЦЕЙ ІМПОРТ
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:case_simulator/Models/item.dart';
 import 'package:case_simulator/Models/case.dart';
-import 'package:case_simulator/widgets/home_screen.dart';
 import 'package:case_simulator/widgets/cases_screen.dart';
 import 'package:case_simulator/widgets/inventory_screen.dart';
-import 'package:case_simulator/widgets/navigation_drawer.dart';
-import 'package:case_simulator/widgets/navigation_bar.dart';
+import 'package:case_simulator/services/auth_service.dart';
+import 'package:case_simulator/Pages/login_screen.dart';
 
 class GamePage extends StatefulWidget {
   const GamePage({super.key});
@@ -16,126 +18,149 @@ class GamePage extends StatefulWidget {
 }
 
 class _GamePageState extends State<GamePage> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  int _selectedIndex = -1;
-
-  late Box<CaseModel> casesBox;
-  late Box<ItemModel> inventoryBox;
-
-  final List<String> _menuItems = ['Cases', 'Inventory'];
+  int _currentIndex = 0;
+  late final Box<ItemModel> _inventoryBox;
+  late final Box<CaseModel> _casesBox;
 
   @override
   void initState() {
     super.initState();
-    casesBox = Hive.box<CaseModel>('cases');
-    inventoryBox = Hive.box<ItemModel>('inventory');
+    _inventoryBox = Hive.box<ItemModel>('inventory');
+    _casesBox = Hive.box<CaseModel>('cases');
+  }
+
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Вихід'),
+        content: const Text('Ви впевнені що хочете вийти?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Скасувати'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await AuthService.logout();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      (route) => false,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Вийти'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ← ДОДАЙ ЦЕЙ МЕТОД
+  Widget _getScreen() {
+    switch (_currentIndex) {
+      case 0:
+        return CasesScreen(casesBox: _casesBox, onAddSampleCases: () {});
+      case 1:
+        return InventoryScreen(inventoryBox: _inventoryBox);
+      case 2:
+        return const RanksScreen(); // ← Новий екран
+      default:
+        return CasesScreen(casesBox: _casesBox, onAddSampleCases: () {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final bool isLargeScreen = width > 800;
+    final currentUser = AuthService.getCurrentUser();
 
-    return Theme(
-      data: ThemeData.dark(),
-      child: Scaffold(
-        key: _scaffoldKey,
-        appBar: _buildAppBar(isLargeScreen),
-        drawer: isLargeScreen ? null : _buildDrawer(),
-        body: _getBody(),
-      ),
-    );
-  }
-
-  AppBar _buildAppBar(bool isLargeScreen) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      titleSpacing: 0,
-      title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              "Case Simulator",
-              style: TextStyle(
-                color: Colors.green,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (isLargeScreen)
-              Expanded(
-                child: AppNavigationBar(
-                  menuItems: _menuItems,
-                  onItemTap: _handleNavigationTap,
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A1A),
+      appBar: AppBar(
+        title: const Text(
+          'Case Simulator',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.green,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        actions: [
+          // Нікнейм користувача
+          if (currentUser != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Center(
+                child: Row(
+                  children: [
+                    const Icon(Icons.person, color: Colors.green, size: 20),
+                    const SizedBox(width: 4),
+                    Text(
+                      currentUser.nickname,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-          ],
-        ),
+            ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Center(
+              child: RankWidget(compact: true),
+            ),
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Center(
+              child: BalanceWidget(),
+            ),
+          ),
+
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.red),
+            tooltip: 'Вийти',
+            onPressed: _logout,
+          ),
+        ],
+      ),
+      body: _getScreen(), // ← ЗМІНИ ТУТ (було тернарний оператор)
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        backgroundColor: const Color(0xFF2D2D2D),
+        selectedItemColor: Colors.green,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.archive),
+            label: 'Cases',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.inventory),
+            label: 'Inventory',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.emoji_events),
+            label: 'Ranks',
+          ),
+        ],
       ),
     );
-  }
-
-  Widget _buildDrawer() {
-    return AppNavigationDrawer(
-      menuItems: _menuItems,
-      onItemTap: _handleNavigationTap,
-    );
-  }
-
-  Widget _getBody() {
-    switch (_selectedIndex) {
-      case -1:
-        return HomeScreen(onCasesTap: () => _handleNavigationTap(0));
-      case 0:
-        return CasesScreen(
-          casesBox: casesBox,
-          onAddSampleCases: _addSampleCases,
-        );
-      case 1:
-        return InventoryScreen(inventoryBox: inventoryBox);
-      default:
-        return HomeScreen(onCasesTap: () => _handleNavigationTap(0));
-    }
-  }
-
-  void _handleNavigationTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  void _addSampleCases() async {
-    final cases = [
-      CaseModel(
-        id: '1',
-        name: 'Chroma Case',
-        imageUrl: '',
-        price: 2.50,
-        rarity: 'Rare',
-        items: ['item1', 'item2', 'item3'],
-      ),
-      CaseModel(
-        id: '2',
-        name: 'Gamma Case',
-        imageUrl: '',
-        price: 3.00,
-        rarity: 'Epic',
-        items: ['item4', 'item5'],
-      ),
-      CaseModel(
-        id: '3',
-        name: 'Spectrum Case',
-        imageUrl: '',
-        price: 1.80,
-        rarity: 'Rare',
-        items: ['item6', 'item7', 'item8'],
-      ),
-    ];
-
-    for (var caseItem in cases) {
-      await casesBox.add(caseItem);
-    }
   }
 }

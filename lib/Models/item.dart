@@ -28,6 +28,9 @@ class ItemModel extends HiveObject {
   @HiveField(7)
   DateTime acquiredAt;
 
+  @HiveField(8)
+  String userId; // ← ДОДАЙ ЦЕ ПОЛЕ
+
   ItemModel({
     required this.id,
     required this.name,
@@ -37,5 +40,6 @@ class ItemModel extends HiveObject {
     required this.rarity,
     required this.imageUrl,
     required this.acquiredAt,
+    required this.userId, // ← ДОДАЙ ЦЕ
   });
 }

@@ -22,7 +22,7 @@ class CaseModelAdapter extends TypeAdapter<CaseModel> {
       imageUrl: fields[2] as String,
       price: fields[3] as double,
       rarity: fields[4] as String,
-      items: (fields[5] as List).cast<String>(),
+      itemsJson: (fields[5] as List).cast<String>(),
     );
   }
 
@@ -41,7 +41,7 @@ class CaseModelAdapter extends TypeAdapter<CaseModel> {
       ..writeByte(4)
       ..write(obj.rarity)
       ..writeByte(5)
-      ..write(obj.items);
+      ..write(obj.itemsJson);
   }
 
   @override

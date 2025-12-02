@@ -25,13 +25,14 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       rarity: fields[5] as String,
       imageUrl: fields[6] as String,
       acquiredAt: fields[7] as DateTime,
+      userId: fields[8] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, ItemModel obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       ..writeByte(6)
       ..write(obj.imageUrl)
       ..writeByte(7)
-      ..write(obj.acquiredAt);
+      ..write(obj.acquiredAt)
+      ..writeByte(8)
+      ..write(obj.userId);
   }
 
   @override

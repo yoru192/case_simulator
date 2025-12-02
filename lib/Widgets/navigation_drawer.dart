@@ -1,3 +1,4 @@
+import 'package:case_simulator/Pages/ranks_screen.dart';
 import 'package:flutter/material.dart';
 
 class AppNavigationDrawer extends StatelessWidget {
@@ -19,12 +20,16 @@ class AppNavigationDrawer extends StatelessWidget {
             .entries
             .map(
               (entry) => ListTile(
-            onTap: () {
-              onItemTap(entry.key);
-              Navigator.pop(context);
-            },
-            title: Text(entry.value),
-          ),
+                leading: const Icon(Icons.emoji_events, color: Colors.amber),
+                title: const Text('Ранги'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const RanksScreen()),
+                  );
+                },
+              ),
         )
             .toList(),
       ),
