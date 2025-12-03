@@ -55,13 +55,16 @@ class _CaseOpeningScreenState extends State<CaseOpeningScreen>
         _earnedXP = XPService.calculateXPForCaseOpening(_wonItem!.rarity);
         XPService.addXP(_earnedXP!);
 
-        // 🎯 ІНКРЕМЕНТ ЛІЧИЛЬНИКА RECOIL ПІСЛЯ ВІДКРИТТЯ
+        // 🎯 ІНКРЕМЕНТ RECOIL
         if (widget.caseModel.name.toLowerCase().contains('recoil')) {
           ApiService.incrementRecoilCounter().then((_) {
             final remaining = ApiService.getRecoilFreeOpensRemaining();
             print('🎮 Recoil відкрито! Залишилось безкоштовних: $remaining');
           });
         }
+
+        // ✅ ОНОВЛЕННЯ КВЕСТІВ ОДРАЗУ ПІСЛЯ ВІДКРИТТЯ
+        _updateQuests();
 
         print('═══════════════════════════════════');
         print('Анімація завершена!');
@@ -182,11 +185,9 @@ class _CaseOpeningScreenState extends State<CaseOpeningScreen>
   void _saveToInventory() {
     final inventoryBox = Hive.box<ItemModel>('inventory');
     final currentUser = AuthService.getCurrentUser();
-
     if (currentUser == null) return;
 
     final price = _calculateItemPrice(_wonItem!.rarity, widget.caseModel.price);
-
     final newItem = ItemModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: _wonItem!.name,
@@ -201,23 +202,9 @@ class _CaseOpeningScreenState extends State<CaseOpeningScreen>
 
     inventoryBox.add(newItem);
 
-    // КВЕСТИ
-    QuestService.updateQuestProgress('cases_opened', 1);
-
-    final rarityLower = _wonItem!.rarity.toLowerCase();
-
-    // ✅ КВЕСТ: НІЖ
-    if (rarityLower.contains('★') ||
-        rarityLower.contains('extraordinary') ||
-        _wonItem!.name.toLowerCase().contains('★')) {
-      print('🔪 Квест ножа оновлено!');
-      QuestService.updateQuestProgress('knife_dropped', 1);
-    }
-    // Квест: Covert (але не ніж)
-    else if (rarityLower.contains('covert')) {
-      QuestService.updateQuestProgress('covert_dropped', 1);
-    }
+    print('✅ Предмет додано в інвентар');
   }
+
 
 
   void _sellItemImmediately() {
@@ -225,8 +212,12 @@ class _CaseOpeningScreenState extends State<CaseOpeningScreen>
     if (currentUser == null || _wonItemPrice == null) return;
 
     BalanceService.addMoney(_wonItemPrice!);
+
+    // Оновлюємо квести продажу
     QuestService.updateQuestProgress('items_sold', 1);
     QuestService.updateQuestProgress('money_earned', _wonItemPrice!.toInt());
+
+    print('💰 Квести оновлено: items_sold +1, money_earned +${_wonItemPrice!.toInt()}');
 
     if (!mounted) return;
 
@@ -237,6 +228,27 @@ class _CaseOpeningScreenState extends State<CaseOpeningScreen>
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  void _updateQuests() {
+    // 1. Завжди оновлюємо лічильник відкритих кейсів
+    QuestService.updateQuestProgress('cases_opened', 1);
+    print('✅ Квест оновлено: cases_opened +1');
+
+    final rarityLower = _wonItem!.rarity.toLowerCase();
+
+    // 2. Перевірка на ніж
+    if (rarityLower.contains('★') ||
+        rarityLower.contains('extraordinary') ||
+        _wonItem!.name.toLowerCase().contains('★')) {
+      QuestService.updateQuestProgress('knife_dropped', 1);
+      print('🔪 Квест оновлено: knife_dropped +1');
+    }
+    // 3. Перевірка на Covert (але не ніж)
+    else if (rarityLower.contains('covert')) {
+      QuestService.updateQuestProgress('covert_dropped', 1);
+      print('💎 Квест оновлено: covert_dropped +1');
+    }
   }
 
 
