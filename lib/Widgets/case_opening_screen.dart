@@ -27,7 +27,7 @@ class _CaseOpeningScreenState extends State<CaseOpeningScreen>
   late Animation<double> _animation;
   late List<CaseItem> _items;
   CaseItem? _wonItem;
-  double? _wonItemPrice;
+  double _wonItemPrice = 0;
   int? _earnedXP;
   bool _isSpinning = false;
   bool _showResult = false;
@@ -187,7 +187,7 @@ class _CaseOpeningScreenState extends State<CaseOpeningScreen>
     final currentUser = AuthService.getCurrentUser();
     if (currentUser == null) return;
 
-    final price = _calculateItemPrice(_wonItem!.rarity, widget.caseModel.price);
+    final price = _wonItemPrice;
     final newItem = ItemModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: _wonItem!.name,

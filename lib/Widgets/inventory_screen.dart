@@ -165,17 +165,31 @@ class _InventoryContentState extends State<_InventoryContent> {
               return _InventoryItemCard(
                 item: item,
                 onSell: () {
+                  // 💰 Додаємо гроші
                   BalanceService.addMoney(item.price);
+
+                  // 🎯 ОНОВЛЕННЯ КВЕСТІВ
+                  QuestService.updateQuestProgress('items_sold', 1);
+                  QuestService.updateQuestProgress('money_earned', item.price.toInt());
+
+                  // 🗑️ Видаляємо предмет
                   item.delete();
                   setState(() {});
 
+                  // 📢 Показуємо повідомлення
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Продано ${item.name} за \$${item.price.toStringAsFixed(2)}'),
+                      content: Text(
+                          'Продано ${item.name} за \$${item.price.toStringAsFixed(2)}'
+                      ),
                       backgroundColor: Colors.green,
                       duration: const Duration(seconds: 2),
                     ),
                   );
+
+                  // 📊 Логування
+                  print('✅ Продано: ${item.name}');
+                  print('💰 Квести оновлено: items_sold +1, money_earned +${item.price.toInt()}');
                 },
               );
             },
