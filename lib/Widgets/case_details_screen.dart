@@ -3,6 +3,7 @@ import 'package:case_simulator/Models/case.dart';
 import 'package:case_simulator/widgets/case_opening_screen.dart';
 import 'package:case_simulator/services/balance_service.dart';
 import 'package:case_simulator/widgets/balance_widget.dart';
+import 'package:case_simulator/Services/api_service.dart'; // 👈 ДОДАЙТЕ
 
 class CaseDetailsScreen extends StatefulWidget {
   final CaseModel caseModel;
@@ -19,6 +20,14 @@ class CaseDetailsScreen extends StatefulWidget {
 class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
   @override
   Widget build(BuildContext context) {
+    print('Items in case "${widget.caseModel.name}":');
+    for (final item in widget.caseModel.items) {
+      print('- ${item.name} [${item.rarity}]');
+    }
+
+    // 🎯 ОТРИМУЄМО АКТУАЛЬНУ ЦІНУ (ДЛЯ RECOIL ДИНАМІЧНУ)
+    final actualPrice = _getActualPrice();
+
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       appBar: AppBar(
@@ -35,56 +44,43 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
       ),
       body: Column(
         children: [
-          CaseHeader(caseModel: widget.caseModel),
-
+          CaseHeader(caseModel: widget.caseModel, actualPrice: actualPrice), // 👈 ПЕРЕДАЄМО АКТУАЛЬНУ ЦІНУ
           // Open Case Button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: ElevatedButton(
-              onPressed: () {
-                final balance = BalanceService.getBalance();
-                final casePrice = widget.caseModel.price;
-
-                if (balance < casePrice) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Недостатньо коштів! Потрібно \$${casePrice.toStringAsFixed(2)}'),
-                      backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                  return;
-                }
-
-                BalanceService.removeMoney(casePrice);
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CaseOpeningScreen(caseModel: widget.caseModel),
-                  ),
-                ).then((result) {
-                  // ← ПРИБРАНО SnackBar - він уже показується в CaseOpeningScreen
-                  setState(() {});
-                });
-              },
+              onPressed: () => _openCase(actualPrice),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 minimumSize: const Size(double.infinity, 50),
               ),
-              child: Text(
-                'OPEN CASE - \$${widget.caseModel.price.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    actualPrice > 0
+                        ? 'OPEN CASE - \$${actualPrice.toStringAsFixed(2)}'
+                        : 'OPEN CASE - FREE',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  // 🎯 ПОКАЗАТИ ЗАЛИШОК ДЛЯ RECOIL
+                  if (widget.caseModel.name.toLowerCase().contains('recoil'))
+                    Text(
+                      'Безкоштовних відкриттів: ${ApiService.getRecoilFreeOpensRemaining()}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.greenAccent,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
-
           const SizedBox(height: 12),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -101,9 +97,7 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: 12),
-
           Expanded(
             child: ItemsList(items: widget.caseModel.items),
           ),
@@ -111,12 +105,60 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
       ),
     );
   }
+
+  // 🎯 МЕТОД ДЛЯ ОТРИМАННЯ АКТУАЛЬНОЇ ЦІНИ
+  double _getActualPrice() {
+    if (widget.caseModel.name.toLowerCase().contains('recoil')) {
+      return ApiService.getRecoilCasePrice();
+    }
+    return widget.caseModel.price;
+  }
+
+  // 🎯 МЕТОД ДЛЯ ВІДКРИТТЯ КЕЙСУ
+  void _openCase(double actualPrice) {
+    final balance = BalanceService.getBalance();
+
+    // Перевірка балансу
+    if (balance < actualPrice) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Недостатньо коштів! Потрібно \$${actualPrice.toStringAsFixed(2)}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Віднімаємо гроші ТІЛЬКИ якщо ціна > 0
+    if (actualPrice > 0) {
+      BalanceService.removeMoney(actualPrice);
+      print('💰 Списано з балансу: \$${actualPrice.toStringAsFixed(2)}');
+    } else {
+      print('🎁 Безкоштовне відкриття Recoil case!');
+    }
+
+    // Відкриваємо кейс
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CaseOpeningScreen(caseModel: widget.caseModel),
+      ),
+    ).then((result) {
+      setState(() {}); // Оновлюємо UI після повернення
+    });
+  }
 }
 
+// 🎯 ОНОВЛЕНИЙ CaseHeader З АКТУАЛЬНОЮ ЦІНОЮ
 class CaseHeader extends StatelessWidget {
   final CaseModel caseModel;
+  final double actualPrice; // 👈 ДОДАНО
 
-  const CaseHeader({required this.caseModel});
+  const CaseHeader({
+    required this.caseModel,
+    required this.actualPrice, // 👈 ДОДАНО
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +218,7 @@ class CaseHeader extends StatelessWidget {
               border: Border.all(color: Colors.green, width: 2),
             ),
             child: Text(
-              '\$${caseModel.price.toStringAsFixed(2)}',
+              actualPrice > 0 ? '\$${actualPrice.toStringAsFixed(2)}' : 'FREE', // 👈 ВИКОРИСТОВУЄМО АКТУАЛЬНУ ЦІНУ
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -213,6 +255,7 @@ class ItemsList extends StatelessWidget {
     return const Color(0xFF4B69FF);
   }
 
+
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
@@ -223,6 +266,7 @@ class ItemsList extends StatelessWidget {
         final rarityColor = _getRarityColor(item.rarity);
 
         return Container(
+
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Colors.grey[850],
@@ -267,6 +311,8 @@ class ItemsList extends StatelessWidget {
           ),
         );
       },
+
     );
+
   }
 }

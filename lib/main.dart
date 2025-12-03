@@ -5,23 +5,26 @@ import 'package:case_simulator/Models/user.dart';
 import 'package:case_simulator/Pages/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:case_simulator/Models/quest.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Ініціалізація Hive
   await Hive.initFlutter();
 
-  // Реєстрація адаптерів
   Hive.registerAdapter(ItemModelAdapter());
   Hive.registerAdapter(CaseModelAdapter());
   Hive.registerAdapter(UserModelAdapter());
   Hive.registerAdapter(RankModelAdapter());
+  Hive.registerAdapter(QuestModelAdapter());
+  Hive.registerAdapter(QuestTypeAdapter());
+  Hive.registerAdapter(QuestStatusAdapter());
 
-  // Відкриття боксів
+
   await Hive.openBox<ItemModel>('inventory');
   await Hive.openBox<CaseModel>('cases');
-  await Hive.openBox<UserModel>('users');
+  await Hive.openBox('users');
+  await Hive.openBox<QuestModel>('quests');
   await Hive.openBox('settings');
 
   runApp(const MyApp());

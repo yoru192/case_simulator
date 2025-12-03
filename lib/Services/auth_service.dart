@@ -1,10 +1,10 @@
-import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:hive/hive.dart';
 import 'package:case_simulator/Models/user.dart';
 
 class AuthService {
-  static const String _currentUserKey = 'current_user_id';
+  static String? _currentUserId;
 
   // Хешування пароля
   static String _hashPassword(String password) {
@@ -15,17 +15,14 @@ class AuthService {
 
   // Реєстрація
   static Future<bool> register(String email, String password, String nickname) async {
-    final usersBox = Hive.box<UserModel>('users');
+    final usersBox = Hive.box('users');
 
     // Перевірка чи email вже існує
     try {
-      usersBox.values.firstWhere(
-            (user) => user.email == email,
-      );
-      // Якщо знайшов - email вже існує
+      usersBox.values.firstWhere((user) => user.email == email);
       return false;
     } catch (e) {
-      // Email не знайдено - можна реєструвати
+      // Email не знайдено
     }
 
     // Створення нового користувача
@@ -38,58 +35,55 @@ class AuthService {
     );
 
     await usersBox.put(newUser.id, newUser);
-
-    // Автоматичний вхід після реєстрації
     await _setCurrentUser(newUser.id);
-
     return true;
   }
 
-  // Авторизація
+  // Вхід
   static Future<bool> login(String email, String password) async {
-    final usersBox = Hive.box<UserModel>('users');
-    final passwordHash = _hashPassword(password);
+    final usersBox = Hive.box('users');
+    final hashedPassword = _hashPassword(password);
 
     try {
       final user = usersBox.values.firstWhere(
-            (user) => user.email == email && user.passwordHash == passwordHash,
+            (user) => user.email == email && user.passwordHash == hashedPassword,
       );
-
       await _setCurrentUser(user.id);
       return true;
     } catch (e) {
-      return false; // Невірний email або пароль
+      return false;
     }
   }
 
   // Вихід
   static Future<void> logout() async {
     final settingsBox = Hive.box('settings');
-    await settingsBox.delete(_currentUserKey);
-  }
-
-  // Перевірка чи користувач авторизований
-  static bool isLoggedIn() {
-    final settingsBox = Hive.box('settings');
-    return settingsBox.containsKey(_currentUserKey);
+    await settingsBox.delete('current_user_id');
+    _currentUserId = null;
   }
 
   // Отримати поточного користувача
   static UserModel? getCurrentUser() {
-    if (!isLoggedIn()) return null;
+    if (_currentUserId == null) {
+      final settingsBox = Hive.box('settings');
+      _currentUserId = settingsBox.get('current_user_id');
+    }
 
-    final settingsBox = Hive.box('settings');
-    final userId = settingsBox.get(_currentUserKey);
+    if (_currentUserId == null) return null;
 
-    if (userId == null) return null;
-
-    final usersBox = Hive.box<UserModel>('users');
-    return usersBox.get(userId);
+    final usersBox = Hive.box('users');
+    return usersBox.get(_currentUserId);
   }
 
-  // Зберегти ID поточного користувача
+  // Встановити поточного користувача
   static Future<void> _setCurrentUser(String userId) async {
+    _currentUserId = userId;
     final settingsBox = Hive.box('settings');
-    await settingsBox.put(_currentUserKey, userId);
+    await settingsBox.put('current_user_id', userId);
+  }
+
+  // Перевірка чи користувач авторизований
+  static bool isLoggedIn() {
+    return getCurrentUser() != null;
   }
 }

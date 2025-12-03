@@ -35,31 +35,44 @@ class ItemCardWidget extends StatelessWidget {
     );
   }
 
-  Color _getRarityColor(String rarity) {
-    print('Rarity received: "$rarity"');
+  bool _isKnife(String rarity, String name) {
+    final r = rarity.toLowerCase();
+    final n = name.toLowerCase();
+    return r.contains('★') ||
+        r.contains('knife') ||
+        r.contains('extraordinary') ||
+        n.contains('★');
+  }
+
+  Color _getRarityColor(String rarity, String name) {
+    if (_isKnife(rarity, name)) {
+      return const Color(0xFFFFD700); // Золотий для ножів
+    }
+
     switch (rarity.toLowerCase()) {
       case 'covert':
       case 'extraordinary':
-        return const Color(0xFFEB4B4B); // Червоний
+        return const Color(0xFFEB4B4B);
       case 'classified':
-        return const Color(0xFFD32CE6); // Рожевий
+        return const Color(0xFFD32CE6);
       case 'restricted':
-        return const Color(0xFF8847FF); // Фіолетовий
+        return const Color(0xFF8847FF);
       case 'mil-spec grade':
       case 'mil-spec':
-        return const Color(0xFF4B69FF); // Синій
+        return const Color(0xFF4B69FF);
       case 'industrial grade':
-        return const Color(0xFF5E98D9); // Світло-синій
+        return const Color(0xFF5E98D9);
       case 'consumer grade':
-        return const Color(0xFFB0C3D9); // Сірий
+        return const Color(0xFFB0C3D9);
       default:
         return const Color(0xFF4B69FF);
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
-    final rarityColor = _getRarityColor(rarity);
+    final rarityColor = _getRarityColor(rarity,itemName);
 
     return GestureDetector(
       onTap: onTap,

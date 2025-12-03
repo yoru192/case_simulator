@@ -1,25 +1,24 @@
-import 'dart:math';
 import 'package:hive/hive.dart';
 import 'package:case_simulator/services/auth_service.dart';
 import 'package:case_simulator/Models/rank.dart';
 
 class XPService {
-  static String _getXPKey() {
-    final user = AuthService.getCurrentUser();
-    if (user == null) return 'xp_guest';
-    return 'xp_${user.id}';
-  }
-
   // Отримати поточний XP
   static int getXP() {
-    final box = Hive.box('settings');
-    return box.get(_getXPKey(), defaultValue: 0) as int;
+    final user = AuthService.getCurrentUser();
+    if (user == null) return 0;
+
+    final settingsBox = Hive.box('settings');
+    return settingsBox.get('xp_${user.id}', defaultValue: 0);
   }
 
   // Встановити XP
   static void setXP(int xp) {
-    final box = Hive.box('settings');
-    box.put(_getXPKey(), xp);
+    final user = AuthService.getCurrentUser();
+    if (user == null) return;
+
+    final settingsBox = Hive.box('settings');
+    settingsBox.put('xp_${user.id}', xp);
   }
 
   // Додати XP
@@ -31,9 +30,8 @@ class XPService {
   // Отримати поточний ранг
   static RankModel getCurrentRank() {
     final xp = getXP();
-
-    // Знаходимо найвищий досягнутий ранг
     RankModel currentRank = RankData.ranks.first;
+
     for (var rank in RankData.ranks) {
       if (xp >= rank.requiredXP) {
         currentRank = rank;
@@ -48,11 +46,9 @@ class XPService {
   // Отримати наступний ранг
   static RankModel? getNextRank() {
     final currentRank = getCurrentRank();
-
     if (currentRank.level >= RankData.ranks.length - 1) {
-      return null; // Максимальний ранг
+      return null;
     }
-
     return RankData.ranks[currentRank.level + 1];
   }
 
@@ -63,12 +59,11 @@ class XPService {
     final nextRank = getNextRank();
 
     if (nextRank == null) {
-      return 1.0; // Максимальний ранг
+      return 1.0;
     }
 
     final xpInCurrentRank = xp - currentRank.requiredXP;
     final xpNeeded = nextRank.requiredXP - currentRank.requiredXP;
-
     return (xpInCurrentRank / xpNeeded).clamp(0.0, 1.0);
   }
 
@@ -76,29 +71,24 @@ class XPService {
   static int getXPToNextRank() {
     final xp = getXP();
     final nextRank = getNextRank();
-
     if (nextRank == null) return 0;
-
     return (nextRank.requiredXP - xp).clamp(0, 999999);
   }
 
-  // Нарахування XP за відкриття кейсу (залежить від рідкості випавшого предмету)
+  // Нарахування XP за відкриття кейсу
   static int calculateXPForCaseOpening(String rarity) {
-    final random = Random();
     final rarityLower = rarity.toLowerCase();
 
-    if (rarityLower.contains('covert') || rarityLower.contains('extraordinary')) {
-      return 10 + random.nextInt(4); // 10-13 XP
+    if (rarityLower.contains('★') ||
+        rarityLower.contains('extraordinary') ||
+        rarityLower.contains('knife')) {
+      return 1000;
     }
 
-    if (rarityLower.contains('classified')) {
-      return 7 + random.nextInt(3); // 7-9 XP
-    }
-
-    if (rarityLower.contains('restricted')) {
-      return 5 + random.nextInt(2); // 5-6 XP
-    }
-
-    return 3 + random.nextInt(3); // 3-5 XP для Mil-Spec
+    if (rarityLower.contains('covert')) return 100;
+    if (rarityLower.contains('classified')) return 50;
+    if (rarityLower.contains('restricted')) return 20;
+    if (rarityLower.contains('mil-spec')) return 5;
+    return 3;
   }
 }

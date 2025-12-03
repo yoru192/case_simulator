@@ -4,6 +4,7 @@ import 'package:case_simulator/Models/item.dart';
 import 'package:case_simulator/services/balance_service.dart';
 import 'package:case_simulator/services/auth_service.dart';
 import 'package:case_simulator/widgets/balance_widget.dart';
+import 'package:case_simulator/services/quest_service.dart';
 
 enum SortBy { priceDesc, priceAsc, newest, oldest }
 enum RarityFilter { all, covert, classified, restricted, milSpec }
@@ -366,117 +367,201 @@ class _InventoryItemCard extends StatelessWidget {
     required this.onSell,
   });
 
-  Color _getRarityColor(String rarity) {
-    final rarityLower = rarity.toLowerCase();
-    if (rarityLower.contains('covert') || rarityLower.contains('extraordinary')) {
-      return const Color(0xFFEB4B4B);
+  Color _getRarityColor() {
+    final rarityLower = item.rarity.toLowerCase();
+
+    // ✅ ЗОЛОТИЙ ДЛЯ НОЖІВ
+    if (rarityLower.contains('★') ||
+        rarityLower.contains('extraordinary') ||
+        rarityLower.contains('knife')) {
+      return const Color(0xFFFFD700);
     }
-    if (rarityLower.contains('classified')) {
-      return const Color(0xFFD32CE6);
-    }
-    if (rarityLower.contains('restricted')) {
-      return const Color(0xFF8847FF);
-    }
+
+    if (rarityLower.contains('covert')) return const Color(0xFFEB4B4B);
+    if (rarityLower.contains('classified')) return const Color(0xFFD32CE6);
+    if (rarityLower.contains('restricted')) return const Color(0xFF8847FF);
     return const Color(0xFF4B69FF);
+  }
+
+  bool _isKnife() {
+    final rarityLower = item.rarity.toLowerCase();
+    return rarityLower.contains('★') ||
+        rarityLower.contains('extraordinary') ||
+        item.name.toLowerCase().contains('★');
   }
 
   @override
   Widget build(BuildContext context) {
-    final rarityColor = _getRarityColor(item.rarity);
+    final rarityColor = _getRarityColor();
+    final isKnife = _isKnife();
 
     return Card(
-      color: Colors.grey[850],
+      margin: const EdgeInsets.all(8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: rarityColor.withOpacity(0.5),
-          width: 2,
+          color: rarityColor,
+          width: isKnife ? 3 : 2, // Товща рамка для ножів
         ),
       ),
-      child: Column(
+      color: Colors.grey[900],
+      child: Stack(
         children: [
-          Expanded(
-            flex: 3,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.grey[900]!,
-                    rarityColor.withOpacity(0.2),
-                  ],
+          // ✅ ДОДАЄМО ЗОЛОТЕ СВІЧЕННЯ ДЛЯ НОЖІВ
+          if (isKnife)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFFFD700).withOpacity(0.2),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
               ),
-              child: item.imageUrl.isNotEmpty
-                  ? Image.network(
-                item.imageUrl,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(Icons.image_not_supported, color: rarityColor, size: 40);
-                },
-              )
-                  : Icon(Icons.inventory, color: rarityColor, size: 40),
             ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: rarityColor.withOpacity(0.2),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(10),
-                  bottomRight: Radius.circular(10),
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    item.name,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ✅ ІКОНКА НОЖА
+              if (isKnife)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700).withOpacity(0.3),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
                     ),
                   ),
-                  Text(
-                    '\$${item.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 28,
-                    child: ElevatedButton(
-                      onPressed: onSell,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      child: const Text(
-                        'ПРОДАТИ',
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.flash_on, color: Color(0xFFFFD700), size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        'LEGENDARY',
                         style: TextStyle(
-                          fontSize: 11,
+                          color: Color(0xFFFFD700),
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      SizedBox(width: 4),
+                      Icon(Icons.flash_on, color: Color(0xFFFFD700), size: 16),
+                    ],
+                  ),
+                ),
+
+              // Зображення
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.grey[850]!,
+                        rarityColor.withOpacity(0.3),
+                      ],
                     ),
                   ),
-                ],
+                  child: Center(
+                    child: item.imageUrl.isNotEmpty
+                        ? Image.network(
+                      item.imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.image_not_supported, size: 60);
+                      },
+                    )
+                        : const Icon(Icons.image_not_supported, size: 60),
+                  ),
+                ),
               ),
-            ),
+
+              // Інформація
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: isKnife ? 13 : 12,
+                        fontWeight: isKnife ? FontWeight.bold : FontWeight.w500,
+                        color: isKnife ? const Color(0xFFFFD700) : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '\$${item.price.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: isKnife ? 16 : 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: rarityColor.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: rarityColor, width: 1),
+                          ),
+                          child: Text(
+                            item.rarity,
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: rarityColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 28,
+                      child: ElevatedButton(
+                        onPressed: onSell,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        child: const Text(
+                          'ПРОДАТИ',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

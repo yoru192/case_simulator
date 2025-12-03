@@ -2,26 +2,22 @@ import 'package:hive/hive.dart';
 import 'package:case_simulator/services/auth_service.dart';
 
 class BalanceService {
-  static const double _startBalance = 0;
-
-  static String _getBalanceKey() {
-    final user = AuthService.getCurrentUser();
-    if (user == null) return 'balance_guest';
-    return 'balance_${user.id}';
-  }
-
   // Отримати баланс
   static double getBalance() {
-    final box = Hive.box('settings');
-    final key = _getBalanceKey();
-    return box.get(key, defaultValue: _startBalance) as double;
+    final user = AuthService.getCurrentUser();
+    if (user == null) return 0.0;
+
+    final settingsBox = Hive.box('settings');
+    return settingsBox.get('balance_${user.id}', defaultValue: 0.0);
   }
 
   // Встановити баланс
   static void setBalance(double amount) {
-    final box = Hive.box('settings');
-    final key = _getBalanceKey();
-    box.put(key, amount); // ← Hive автоматично тригерить listeners
+    final user = AuthService.getCurrentUser();
+    if (user == null) return;
+
+    final settingsBox = Hive.box('settings');
+    settingsBox.put('balance_${user.id}', amount);
   }
 
   // Додати гроші
@@ -30,7 +26,7 @@ class BalanceService {
     setBalance(currentBalance + amount);
   }
 
-  // Зняти гроші (повертає true якщо вдалося)
+  // Зняти гроші
   static bool removeMoney(double amount) {
     final currentBalance = getBalance();
     if (currentBalance >= amount) {

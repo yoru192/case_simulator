@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:case_simulator/Models/case.dart';
 import 'package:case_simulator/widgets/case_details_screen.dart';
+import 'package:case_simulator/Services/api_service.dart';
 
 enum PriceFilter { all, free, under1, range1to5, range5to10, over10 }
+
 enum CaseSortBy { priceDesc, priceAsc, nameAsc }
 
 class CasesScreen extends StatelessWidget {
-  final Box<CaseModel> casesBox;
+  final Box casesBox;
   final VoidCallback onAddSampleCases;
 
   const CasesScreen({
@@ -20,7 +22,7 @@ class CasesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
       valueListenable: casesBox.listenable(),
-      builder: (context, Box<CaseModel> box, _) {
+      builder: (context, Box box, _) {
         if (box.isEmpty) {
           return _EmptyCasesView(onAddSampleCases: onAddSampleCases);
         }
@@ -33,6 +35,7 @@ class CasesScreen extends StatelessWidget {
 
 class _EmptyCasesView extends StatelessWidget {
   final VoidCallback onAddSampleCases;
+
   const _EmptyCasesView({required this.onAddSampleCases});
 
   @override
@@ -57,7 +60,8 @@ class _EmptyCasesView extends StatelessWidget {
 }
 
 class _CasesGridView extends StatefulWidget {
-  final Box<CaseModel> box;
+  final Box box;
+
   const _CasesGridView({required this.box});
 
   @override
@@ -68,30 +72,32 @@ class _CasesGridViewState extends State<_CasesGridView> {
   PriceFilter _priceFilter = PriceFilter.all;
   CaseSortBy _sortBy = CaseSortBy.priceDesc;
 
-  List<CaseModel> get _filteredAndSortedCases {
+  List get _filteredAndSortedCases {
     var cases = widget.box.values.toList();
 
-    // Фільтрація за ціною
     if (_priceFilter != PriceFilter.all) {
       cases = cases.where((caseItem) {
+        final actualPrice = caseItem.name.toLowerCase().contains('recoil')
+            ? ApiService.getRecoilCasePrice()
+            : caseItem.price;
+
         switch (_priceFilter) {
           case PriceFilter.free:
-            return caseItem.price == 0;
+            return actualPrice == 0;
           case PriceFilter.under1:
-            return caseItem.price > 0 && caseItem.price < 1;
+            return actualPrice > 0 && actualPrice < 1;
           case PriceFilter.range1to5:
-            return caseItem.price >= 1 && caseItem.price < 5;
+            return actualPrice >= 1 && actualPrice < 5;
           case PriceFilter.range5to10:
-            return caseItem.price >= 5 && caseItem.price < 10;
+            return actualPrice >= 5 && actualPrice < 10;
           case PriceFilter.over10:
-            return caseItem.price >= 10;
+            return actualPrice >= 10;
           default:
             return true;
         }
       }).toList();
     }
 
-    // Сортування
     switch (_sortBy) {
       case CaseSortBy.priceDesc:
         cases.sort((a, b) => b.price.compareTo(a.price));
@@ -111,8 +117,8 @@ class _CasesGridViewState extends State<_CasesGridView> {
   Widget build(BuildContext context) {
     final displayedCases = _filteredAndSortedCases;
     final screenWidth = MediaQuery.of(context).size.width;
-
     int crossAxisCount;
+
     if (screenWidth > 1200) {
       crossAxisCount = 10;
     } else if (screenWidth > 900) {
@@ -132,7 +138,6 @@ class _CasesGridViewState extends State<_CasesGridView> {
           onPriceFilterChanged: (value) => setState(() => _priceFilter = value),
           onSortChanged: (value) => setState(() => _sortBy = value),
         ),
-
         Expanded(
           child: displayedCases.isEmpty
               ? const Center(
@@ -164,8 +169,8 @@ class _CasesGridViewState extends State<_CasesGridView> {
 class _CasesFiltersBar extends StatelessWidget {
   final PriceFilter priceFilter;
   final CaseSortBy sortBy;
-  final ValueChanged<PriceFilter> onPriceFilterChanged;
-  final ValueChanged<CaseSortBy> onSortChanged;
+  final ValueChanged onPriceFilterChanged;
+  final ValueChanged onSortChanged;
 
   const _CasesFiltersBar({
     required this.priceFilter,
@@ -186,11 +191,10 @@ class _CasesFiltersBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Фільтр за ціною
           const Icon(Icons.filter_alt, color: Colors.green, size: 20),
           const SizedBox(width: 8),
           Expanded(
-            child: DropdownButton<PriceFilter>(
+            child: DropdownButton(
               value: priceFilter,
               isExpanded: true,
               dropdownColor: Colors.grey[850],
@@ -208,14 +212,11 @@ class _CasesFiltersBar extends StatelessWidget {
               },
             ),
           ),
-
           const SizedBox(width: 16),
-
-          // Сортування
           const Icon(Icons.sort, color: Colors.green, size: 20),
           const SizedBox(width: 8),
           Expanded(
-            child: DropdownButton<CaseSortBy>(
+            child: DropdownButton(
               value: sortBy,
               isExpanded: true,
               dropdownColor: Colors.grey[850],
@@ -238,10 +239,13 @@ class _CasesFiltersBar extends StatelessWidget {
 
 class _CaseCard extends StatelessWidget {
   final CaseModel caseItem;
+
   const _CaseCard({required this.caseItem});
 
   @override
   Widget build(BuildContext context) {
+    final isRecoil = caseItem.name.toLowerCase().contains('recoil');
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -294,7 +298,9 @@ class _CaseCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
+            isRecoil
+                ? _RecoilCasePriceWidget()
+                : Text(
               caseItem.price == 0
                   ? 'FREE'
                   : '\$${caseItem.price.toStringAsFixed(2)}',
@@ -306,6 +312,43 @@ class _CaseCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RecoilCasePriceWidget extends StatelessWidget {
+  const _RecoilCasePriceWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: Hive.box('settings').listenable(),
+      builder: (context, box, _) {
+        final currentPrice = ApiService.getRecoilCasePrice();
+        final remaining = ApiService.getRecoilFreeOpensRemaining();
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              currentPrice == 0 ? 'FREE' : '\$${currentPrice.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: currentPrice == 0 ? Colors.blue : Colors.green,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            if (remaining > 0)
+              Text(
+                '($remaining left)',
+                style: const TextStyle(
+                  color: Colors.greenAccent,
+                  fontSize: 9,
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

@@ -4,6 +4,8 @@ import 'package:case_simulator/services/api_service.dart';
 import 'package:case_simulator/Pages/login_screen.dart';
 import 'package:case_simulator/Pages/game_page.dart';
 
+import '../Services/quest_service.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -44,9 +46,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
       // Перевіряємо авторизацію
       setState(() => _statusText = 'Перевірка авторизації...');
-      await Future.delayed(const Duration(milliseconds: 500));
-
       final isLoggedIn = AuthService.isLoggedIn();
+
+      // ✅ ПЕРЕВІРЯЄМО ТА СКИДАЄМО КВЕСТИ
+      if (isLoggedIn) {
+        setState(() => _statusText = 'Оновлення квестів...');
+        await QuestService.checkAndResetQuests();
+      }
+
+      await Future.delayed(const Duration(milliseconds: 500));
 
       // Навігація
       if (mounted) {
@@ -59,14 +67,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       }
     } catch (e) {
       setState(() => _statusText = 'Помилка завантаження: $e');
-
-      // Показуємо кнопку повтору
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
         _showRetryDialog();
       }
     }
   }
+
 
   void _showRetryDialog() {
     showDialog(

@@ -15,7 +15,7 @@ class RankWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
-      valueListenable: Hive.box('settings').listenable(),
+      valueListenable: Hive.box('users').listenable(),
       builder: (context, box, _) {
         final currentRank = XPService.getCurrentRank();
         final nextRank = XPService.getNextRank();

@@ -1,3 +1,5 @@
+import 'package:case_simulator/Pages/quests_screen.dart';
+import 'package:case_simulator/Services/quest_service.dart';
 import 'package:case_simulator/Widgets/balance_widget.dart';
 import 'package:case_simulator/Widgets/rank_widget.dart';
 import 'package:case_simulator/Pages/ranks_screen.dart'; // ← ДОДАЙ ЦЕЙ ІМПОРТ
@@ -9,6 +11,7 @@ import 'package:case_simulator/widgets/cases_screen.dart';
 import 'package:case_simulator/widgets/inventory_screen.dart';
 import 'package:case_simulator/services/auth_service.dart';
 import 'package:case_simulator/Pages/login_screen.dart';
+import 'package:case_simulator/Models/quest.dart';
 
 class GamePage extends StatefulWidget {
   const GamePage({super.key});
@@ -92,6 +95,55 @@ class _GamePageState extends State<GamePage> {
         elevation: 0,
         centerTitle: false,
         actions: [
+          // Кнопка квестів
+          ValueListenableBuilder(
+            valueListenable: Hive.box<QuestModel>('quests').listenable(),
+            builder: (context, Box<QuestModel> box, _) {
+              final completedQuests = QuestService.getUserQuests()
+                  .where((q) => q.canClaim)
+                  .length;
+
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.assignment, color: Colors.amber),
+                    tooltip: 'Квести',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const QuestsScreen()),
+                      );
+                    },
+                  ),
+                  if (completedQuests > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Text(
+                          '$completedQuests',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           // Нікнейм користувача
           if (currentUser != null)
             Padding(

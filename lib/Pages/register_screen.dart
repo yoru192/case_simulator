@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:case_simulator/services/auth_service.dart';
 import 'package:case_simulator/Pages/login_screen.dart';
 import 'package:case_simulator/Pages/game_page.dart';
+import 'package:case_simulator/services/quest_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -44,6 +45,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
+      final user = AuthService.getCurrentUser();
+      if (user != null) {
+        await QuestService.initializeQuestsForUser(user.id);
+      }
       if (mounted) {
         Navigator.pushReplacement(
           context,

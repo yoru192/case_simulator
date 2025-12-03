@@ -25,7 +25,5 @@ dev_dependencies:
   build_runner: ^2.4.13
 
 flutter:
-  assets:
-    - assets/data/cases.json
   uses-material-design: true
 
