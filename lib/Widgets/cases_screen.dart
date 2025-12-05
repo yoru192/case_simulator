@@ -201,7 +201,6 @@ class _CasesFiltersBar extends StatelessWidget {
               underline: Container(),
               items: const [
                 DropdownMenuItem(value: PriceFilter.all, child: Text('Всі ціни')),
-                DropdownMenuItem(value: PriceFilter.free, child: Text('Безкоштовні')),
                 DropdownMenuItem(value: PriceFilter.under1, child: Text('< \$1')),
                 DropdownMenuItem(value: PriceFilter.range1to5, child: Text('\$1 - \$5')),
                 DropdownMenuItem(value: PriceFilter.range5to10, child: Text('\$5 - \$10')),

@@ -142,17 +142,12 @@ class _CaseOpeningScreenState extends State<CaseOpeningScreen>
     ).toList();
 
     // ШАНСИ CS:GO:
-    // 0.26% - Ніж
     // 0.64% - Covert
     // 3.2% - Classified
     // 15.98% - Restricted
     // 79.92% - Mil-Spec
 
-    if (roll < 0.26 && knifeItems.isNotEmpty) {
-      final knife = knifeItems[random.nextInt(knifeItems.length)];
-      print('🔪 ВИПАВ НІЖ: ${knife.name} (шанс: 0.26%)');
-      return knife;
-    } else if (roll < 0.90 && covertItems.isNotEmpty) {
+    if (roll < 0.90 && covertItems.isNotEmpty) {
       return covertItems[random.nextInt(covertItems.length)];
     } else if (roll < 4.10 && classifiedItems.isNotEmpty) {
       return classifiedItems[random.nextInt(classifiedItems.length)];
@@ -237,12 +232,10 @@ class _CaseOpeningScreenState extends State<CaseOpeningScreen>
 
     final rarityLower = _wonItem!.rarity.toLowerCase();
 
-    // 2. Перевірка на ніж
-    if (rarityLower.contains('★') ||
-        rarityLower.contains('extraordinary') ||
-        _wonItem!.name.toLowerCase().contains('★')) {
-      QuestService.updateQuestProgress('knife_dropped', 1);
-      print('🔪 Квест оновлено: knife_dropped +1');
+    // 2. Перевірка на Classified
+    if (rarityLower.contains('classified')) {
+      QuestService.updateQuestProgress('classified_dropped', 1);
+      print('💎 Квест оновлено: classified_dropped +1');
     }
     // 3. Перевірка на Covert (але не ніж)
     else if (rarityLower.contains('covert')) {
