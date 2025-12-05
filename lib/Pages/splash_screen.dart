@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:case_simulator/services/auth_service.dart';
-import 'package:case_simulator/services/api_service.dart';
+import 'package:case_simulator/Services/api_service.dart';
 import 'package:case_simulator/Pages/login_screen.dart';
 import 'package:case_simulator/Pages/game_page.dart';
-
 import '../Services/quest_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -41,17 +40,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       // Завантажуємо кейси
       setState(() => _statusText = 'Завантаження кейсів...');
       await ApiService.loadCasesFromAPI();
-
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Перевіряємо авторизацію
       setState(() => _statusText = 'Перевірка авторизації...');
       final isLoggedIn = AuthService.isLoggedIn();
 
-      // ✅ ПЕРЕВІРЯЄМО ТА СКИДАЄМО КВЕСТИ
+      // ✅ ПЕРЕВІРЯЄМО ТА СКИДАЄМО КВЕСТИ І RECOIL (ТІЛЬКИ ДЛЯ ЗАЛОГІНЕНИХ)
       if (isLoggedIn) {
         setState(() => _statusText = 'Оновлення квестів...');
         await QuestService.checkAndResetQuests();
+
+        // ✅ ДОДАЙ ЦЕЙ РЯДОК - СКИДАННЯ RECOIL
+        await ApiService.checkAndResetRecoilOpens();
       }
 
       await Future.delayed(const Duration(milliseconds: 500));

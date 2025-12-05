@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:case_simulator/Models/case.dart';
@@ -315,8 +316,30 @@ class _CaseCard extends StatelessWidget {
   }
 }
 
-class _RecoilCasePriceWidget extends StatelessWidget {
+class _RecoilCasePriceWidget extends StatefulWidget {
   const _RecoilCasePriceWidget();
+
+  @override
+  State<_RecoilCasePriceWidget> createState() => _RecoilCasePriceWidgetState();
+}
+
+class _RecoilCasePriceWidgetState extends State<_RecoilCasePriceWidget> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Оновлюємо кожну хвилину
+    _timer = Timer.periodic(Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -325,6 +348,7 @@ class _RecoilCasePriceWidget extends StatelessWidget {
       builder: (context, box, _) {
         final currentPrice = ApiService.getRecoilCasePrice();
         final remaining = ApiService.getRecoilFreeOpensRemaining();
+        final timeUntilReset = ApiService.getTimeUntilReset();
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -338,16 +362,15 @@ class _RecoilCasePriceWidget extends StatelessWidget {
               ),
             ),
             if (remaining > 0)
-              Text(
-                '($remaining left)',
-                style: const TextStyle(
-                  color: Colors.greenAccent,
-                  fontSize: 9,
-                ),
-              ),
+              Text('🎁 $remaining/10',
+                  style: TextStyle(color: Colors.greenAccent, fontSize: 9)),
+            if (remaining == 0)
+              Text('⏰ $timeUntilReset',
+                  style: TextStyle(color: Colors.orange, fontSize: 8)),
           ],
         );
       },
     );
   }
 }
+

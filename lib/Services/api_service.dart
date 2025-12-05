@@ -5,6 +5,8 @@ import 'package:case_simulator/Models/case.dart';
 import 'package:case_simulator/services/auth_service.dart';
 
 class ApiService {
+  static const String _lastRecoilResetKey = 'last_recoil_reset';
+  static const int _maxFreeOpens = 10;
   static const String _apiUrl =
       'https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/crates.json';
 
@@ -185,6 +187,68 @@ class ApiService {
       'remaining': remaining,
       'currentPrice': price,
     };
+  }
+
+  // 🎯 ПЕРЕВІРКА І ЩОДЕННЕ СКИДАННЯ
+  static Future<void> checkAndResetRecoilOpens() async {
+    final user = AuthService.getCurrentUser();
+    if (user == null) {
+      print('⚠️ Користувач не авторизований');
+      return;
+    }
+
+    final settingsBox = Hive.box('settings');
+    final now = DateTime.now();
+    final lastResetStr = settingsBox.get('${_lastRecoilResetKey}_${user.id}');
+
+    // Якщо минув день - скидаємо
+    if (lastResetStr == null || _shouldResetDaily(DateTime.parse(lastResetStr), now)) {
+      await resetRecoilCounter();
+      await settingsBox.put('${_lastRecoilResetKey}_${user.id}', now.toIso8601String());
+      print('🔄 Recoil безкоштовні відкриття скинуто до $_maxFreeOpens');
+    } else {
+      print('✅ Recoil скидання не потрібне. Залишилось: ${getRecoilFreeOpensRemaining()}');
+    }
+  }
+
+  // 🎯 ОТРИМАТИ ЧАС ДО НАСТУПНОГО СКИДАННЯ
+  static String getTimeUntilReset() {
+    final user = AuthService.getCurrentUser();
+    if (user == null) return 'N/A';
+
+    final settingsBox = Hive.box('settings');
+    final lastResetStr = settingsBox.get('${_lastRecoilResetKey}_${user.id}');
+
+    final DateTime lastReset;
+    if (lastResetStr == null) {
+      // Якщо немає збереженої дати - використовуємо сьогодні
+      lastReset = DateTime.now();
+    } else {
+      lastReset = DateTime.parse(lastResetStr);
+    }
+
+    final now = DateTime.now();
+
+    // Наступне скидання о 00:00 наступного дня
+    final nextReset = DateTime(now.year, now.month, now.day + 1);
+    final difference = nextReset.difference(now);
+
+    if (difference.isNegative) {
+      return 'Доступно зараз!';
+    }
+
+    final hours = difference.inHours;
+    final minutes = difference.inMinutes % 60;
+
+    return '${hours}г ${minutes}хв';
+  }
+
+
+// 🎯 ПЕРЕВІРКА ЧИ МИНУВ ДЕНЬ
+  static bool _shouldResetDaily(DateTime last, DateTime now) {
+    return now.day != last.day ||
+        now.month != last.month ||
+        now.year != last.year;
   }
 
   static double _calculateCasePrice(String caseName) {

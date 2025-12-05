@@ -26,7 +26,6 @@ void main() async {
   await Hive.openBox('users');
   await Hive.openBox<QuestModel>('quests');
   await Hive.openBox('settings');
-
   runApp(const MyApp());
 }
 
